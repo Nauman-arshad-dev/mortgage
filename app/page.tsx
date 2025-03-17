@@ -88,9 +88,13 @@ export default function Home() {
     await signOut({ callbackUrl: "/login" });
   };
 
-  // Helper to format numbers with commas
-  const formatNumber = (num: number) =>
-    num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  // Format numbers with commas, no trailing zeros for whole numbers
+  const formatNumber = (num: number) => {
+    return num.toLocaleString("en-US", {
+      minimumFractionDigits: num % 1 === 0 ? 0 : 2, // 0 decimals if whole, 2 if fractional
+      maximumFractionDigits: 2, // Cap at 2 decimals
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 p-4">
