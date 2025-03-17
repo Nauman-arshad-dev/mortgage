@@ -1,9 +1,9 @@
 export interface QuoteInput {
-  loan_amount: number;
+  purchase_price: number; // New: Total property price
+  ltv: number; // New: Loan-to-Value percentage
   interest_rate: number;
   loan_term: number;
-  down_payment: number;
-  loan_type: 'Conventional' | 'FHA' | 'VA';
+  loan_type: "Conventional" | "FHA" | "VA";
 }
 
 export interface QuoteResponse {

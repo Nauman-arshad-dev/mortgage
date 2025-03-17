@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useSession, signOut } from "next-auth/react"; // Add signOut import
+import { useSession, signOut } from "next-auth/react";
 import { redirect } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -26,13 +26,13 @@ import {
 } from "@/components/ui/select";
 import { calculateMortgage } from "@/lib/mortgage-calculator";
 import { QuoteInput } from "@/lib/types";
-import { HomeIcon, LogOut } from "lucide-react"; // Add LogOut icon
+import { HomeIcon, LogOut } from "lucide-react";
 
 const formSchema = z.object({
-  loan_amount: z.number().min(10000).max(10000000),
+  purchase_price: z.number().min(10000).max(10000000), // New field: Purchase Price
+  ltv: z.number().min(1).max(100), // New field: LTV (percentage)
   interest_rate: z.number().min(0.1).max(20),
   loan_term: z.enum(["15", "20", "30"]),
-  down_payment: z.number().min(0),
   loan_type: z.enum(["Conventional", "FHA", "VA"]),
 });
 
@@ -43,9 +43,8 @@ export default function Home() {
     totalInterest: number;
   } | null>(null);
 
-  // Only redirect if explicitly unauthenticated, not while loading
   if (status === "loading") {
-    return <div>Loading...</div>; // Show a loading state
+    return <div>Loading...</div>;
   }
   if (status === "unauthenticated") {
     redirect("/login");
@@ -54,34 +53,28 @@ export default function Home() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      loan_amount: 300000,
+      purchase_price: 375000, // Example: $375,000
+      ltv: 80, // Example: 80% LTV
       interest_rate: 6.5,
       loan_term: "30",
-      down_payment: 60000,
       loan_type: "Conventional",
     },
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     const input: QuoteInput = {
-      ...values,
+      purchase_price: values.purchase_price,
+      ltv: values.ltv,
+      interest_rate: values.interest_rate,
       loan_term: parseInt(values.loan_term),
+      loan_type: values.loan_type,
     };
-
-    if (input.down_payment > input.loan_amount) {
-      form.setError("down_payment", {
-        message: "Down payment cannot exceed loan amount",
-      });
-      return;
-    }
-
     const result = calculateMortgage(input);
     setQuote(result);
   };
 
-  // Logout handler
   const handleLogout = async () => {
-    await signOut({ callbackUrl: "/login" }); // Redirect to /login after logout
+    await signOut({ callbackUrl: "/login" });
   };
 
   return (
@@ -111,13 +104,34 @@ export default function Home() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormField
                     control={form.control}
-                    name="loan_amount"
+                    name="purchase_price"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Loan Amount ($)</FormLabel>
+                        <FormLabel>Purchase Price ($)</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
+                            {...field}
+                            onChange={(e) =>
+                              field.onChange(Number(e.target.value))
+                            }
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="ltv"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>LTV (%)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.1"
                             {...field}
                             onChange={(e) =>
                               field.onChange(Number(e.target.value))
@@ -171,26 +185,6 @@ export default function Home() {
                             <SelectItem value="30">30 Years</SelectItem>
                           </SelectContent>
                         </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="down_payment"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Down Payment ($)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(Number(e.target.value))
-                            }
-                          />
-                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
