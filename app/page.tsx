@@ -37,15 +37,14 @@ const formSchema = z.object({
   loan_term: z.enum(["15", "20", "30"]),
   loan_type: z.enum(["Conventional", "FHA", "VA"]),
   property_address: z.string().min(1, "Property address is required"),
-  va_exempt: z.boolean().optional(), // Only for VA
+  va_exempt: z.boolean().optional(),
 });
 
 export default function Home() {
   const { data: session, status } = useSession();
   const [quote, setQuote] = useState<{
     monthlyPayment: number;
-    totalInterest: number;
-    loanAmount?: number; // Optional display
+    loanAmount?: number;
   } | null>(null);
 
   if (status === "loading") return <div>Loading...</div>;
@@ -65,7 +64,7 @@ export default function Home() {
     },
   });
 
-  const loanType = form.watch("loan_type"); // Watch loan_type for conditional rendering
+  const loanType = form.watch("loan_type");
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     const input: QuoteInput = {
@@ -82,12 +81,16 @@ export default function Home() {
 
     const loanAmount = calculateLoanAmount(input);
     const result = calculateMortgage({ ...input, loan_amount: loanAmount });
-    setQuote({ ...result, loanAmount }); // Include loanAmount for display
+    setQuote({ ...result, loanAmount });
   };
 
   const handleLogout = async () => {
     await signOut({ callbackUrl: "/login" });
   };
+
+  // Helper to format numbers with commas
+  const formatNumber = (num: number) =>
+    num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 p-4">
@@ -292,15 +295,11 @@ export default function Home() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-gray-500">Loan Amount</p>
-                    <p className="text-2xl font-bold">${quote.loanAmount?.toFixed(2)}</p>
+                    <p className="text-2xl font-bold">${formatNumber(quote.loanAmount!)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Monthly Payment</p>
-                    <p className="text-2xl font-bold">${quote.monthlyPayment.toFixed(2)}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Total Interest</p>
-                    <p className="text-2xl font-bold">${quote.totalInterest.toFixed(2)}</p>
+                    <p className="text-2xl font-bold">${formatNumber(quote.monthlyPayment)}</p>
                   </div>
                 </div>
                 <p className="text-sm text-gray-500 text-center italic">

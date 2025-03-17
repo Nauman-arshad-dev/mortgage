@@ -1,17 +1,16 @@
 export interface QuoteInput {
-  first_name: string; // New
-  last_name: string; // New
-  property_value: number; // Renamed from purchase_price
+  first_name: string;
+  last_name: string;
+  property_value: number;
   ltv: number;
   interest_rate: number;
   loan_term: number;
   loan_type: "Conventional" | "FHA" | "VA";
-  property_address: string; // New
-  va_exempt?: boolean; // Optional, only for VA loans
+  property_address: string;
+  va_exempt?: boolean;
 }
 
 export interface QuoteResponse {
-  monthly_payment: number;
-  total_interest: number;
+  monthly_payment: number; // Only this remains
   message: string;
 }

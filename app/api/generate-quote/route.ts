@@ -19,11 +19,10 @@ export async function POST(request: NextRequest) {
     }
 
     const loanAmount = calculateLoanAmount(input);
-    const { monthlyPayment, totalInterest } = calculateMortgage({ ...input, loan_amount: loanAmount });
+    const { monthlyPayment } = calculateMortgage({ ...input, loan_amount: loanAmount });
 
     const response: QuoteResponse = {
-      monthly_payment: Number(monthlyPayment.toFixed(2)),
-      total_interest: Number(totalInterest.toFixed(2)),
+      monthly_payment: Number(monthlyPayment.toFixed(2)), // Keep as number for API
       message: "Quote generated successfully",
     };
 
