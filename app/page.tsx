@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react"; // Add signOut import
 import { redirect } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/select";
 import { calculateMortgage } from "@/lib/mortgage-calculator";
 import { QuoteInput } from "@/lib/types";
-import { HomeIcon } from "lucide-react";
+import { HomeIcon, LogOut } from "lucide-react"; // Add LogOut icon
 
 const formSchema = z.object({
   loan_amount: z.number().min(10000).max(10000000),
@@ -78,14 +78,24 @@ export default function Home() {
     const result = calculateMortgage(input);
     setQuote(result);
   };
+
+  // Logout handler
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: "/login" }); // Redirect to /login after logout
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 p-4">
       <div className="max-w-4xl mx-auto space-y-6">
-        <div className="flex items-center justify-center space-x-4">
-          <HomeIcon className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold text-center">
-            Reliable Mortgage Quote Tool
-          </h1>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center justify-center space-x-4">
+            <HomeIcon className="h-8 w-8 text-primary" />
+            <h1 className="text-3xl font-bold">Reliable Mortgage Quote Tool</h1>
+          </div>
+          <Button variant="outline" onClick={handleLogout} className="space-x-2">
+            <LogOut className="h-4 w-4" />
+            <span>Logout</span>
+          </Button>
         </div>
 
         <Card>
