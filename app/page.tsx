@@ -43,6 +43,10 @@ export default function Home() {
     totalInterest: number;
   } | null>(null);
 
+  // Only redirect if explicitly unauthenticated, not while loading
+  if (status === "loading") {
+    return <div>Loading...</div>; // Show a loading state
+  }
   if (status === "unauthenticated") {
     redirect("/login");
   }
@@ -74,7 +78,6 @@ export default function Home() {
     const result = calculateMortgage(input);
     setQuote(result);
   };
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 p-4">
       <div className="max-w-4xl mx-auto space-y-6">

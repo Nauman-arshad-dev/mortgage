@@ -20,14 +20,16 @@ export default function LoginPage() {
       const res = await signIn("credentials", {
         username: formData.get("username"),
         password: formData.get("password"),
-        redirect: false,
+        redirect: false, // Keep this to handle manually
       });
 
       if (res?.error) {
         setError("Invalid credentials");
       } else {
+        // Wait briefly for session to propagate, then redirect
+        await new Promise((resolve) => setTimeout(resolve, 100)); // Small delay
         router.push("/");
-        router.refresh();
+        router.refresh(); // Force re-render with updated session
       }
     } catch (error) {
       setError("An error occurred. Please try again.");
