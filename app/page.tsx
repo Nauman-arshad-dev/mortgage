@@ -24,16 +24,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { calculateMortgage } from "@/lib/mortgage-calculator";
+import { calculateMortgage, calculateLoanAmount } from "@/lib/mortgage-calculator";
 import { QuoteInput } from "@/lib/types";
 import { HomeIcon, LogOut } from "lucide-react";
 
 const formSchema = z.object({
-  purchase_price: z.number().min(10000).max(10000000), // New field: Purchase Price
-  ltv: z.number().min(1).max(100), // New field: LTV (percentage)
+  first_name: z.string().min(1, "First name is required"),
+  last_name: z.string().min(1, "Last name is required"),
+  property_value: z.number().min(10000).max(10000000),
+  ltv: z.number().min(1).max(100),
   interest_rate: z.number().min(0.1).max(20),
   loan_term: z.enum(["15", "20", "30"]),
   loan_type: z.enum(["Conventional", "FHA", "VA"]),
+  property_address: z.string().min(1, "Property address is required"),
+  va_exempt: z.boolean().optional(), // Only for VA
 });
 
 export default function Home() {
@@ -41,36 +45,44 @@ export default function Home() {
   const [quote, setQuote] = useState<{
     monthlyPayment: number;
     totalInterest: number;
+    loanAmount?: number; // Optional display
   } | null>(null);
 
-  if (status === "loading") {
-    return <div>Loading...</div>;
-  }
-  if (status === "unauthenticated") {
-    redirect("/login");
-  }
+  if (status === "loading") return <div>Loading...</div>;
+  if (status === "unauthenticated") redirect("/login");
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      purchase_price: 375000, // Example: $375,000
-      ltv: 80, // Example: 80% LTV
+      first_name: "",
+      last_name: "",
+      property_value: 375000,
+      ltv: 80,
       interest_rate: 6.5,
       loan_term: "30",
       loan_type: "Conventional",
+      property_address: "",
     },
   });
 
+  const loanType = form.watch("loan_type"); // Watch loan_type for conditional rendering
+
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     const input: QuoteInput = {
-      purchase_price: values.purchase_price,
+      first_name: values.first_name,
+      last_name: values.last_name,
+      property_value: values.property_value,
       ltv: values.ltv,
       interest_rate: values.interest_rate,
       loan_term: parseInt(values.loan_term),
       loan_type: values.loan_type,
+      property_address: values.property_address,
+      va_exempt: values.va_exempt,
     };
-    const result = calculateMortgage(input);
-    setQuote(result);
+
+    const loanAmount = calculateLoanAmount(input);
+    const result = calculateMortgage({ ...input, loan_amount: loanAmount });
+    setQuote({ ...result, loanAmount }); // Include loanAmount for display
   };
 
   const handleLogout = async () => {
@@ -81,7 +93,7 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 p-4">
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
-          <div className="flex items-center justify-center space-x-4">
+          <div className="flex items-center space-x-4">
             <HomeIcon className="h-8 w-8 text-primary" />
             <h1 className="text-3xl font-bold">Reliable Mortgage Quote Tool</h1>
           </div>
@@ -97,31 +109,51 @@ export default function Home() {
           </CardHeader>
           <CardContent>
             <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                className="space-y-6"
-              >
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormField
                     control={form.control}
-                    name="purchase_price"
+                    name="first_name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Purchase Price ($)</FormLabel>
+                        <FormLabel>First Name</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="last_name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Last Name</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="property_value"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Property Value ($)</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
                             {...field}
-                            onChange={(e) =>
-                              field.onChange(Number(e.target.value))
-                            }
+                            onChange={(e) => field.onChange(Number(e.target.value))}
                           />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-
                   <FormField
                     control={form.control}
                     name="ltv"
@@ -133,16 +165,13 @@ export default function Home() {
                             type="number"
                             step="0.1"
                             {...field}
-                            onChange={(e) =>
-                              field.onChange(Number(e.target.value))
-                            }
+                            onChange={(e) => field.onChange(Number(e.target.value))}
                           />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-
                   <FormField
                     control={form.control}
                     name="interest_rate"
@@ -154,26 +183,20 @@ export default function Home() {
                             type="number"
                             step="0.1"
                             {...field}
-                            onChange={(e) =>
-                              field.onChange(Number(e.target.value))
-                            }
+                            onChange={(e) => field.onChange(Number(e.target.value))}
                           />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-
                   <FormField
                     control={form.control}
                     name="loan_term"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Loan Term (Years)</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select loan term" />
@@ -189,26 +212,20 @@ export default function Home() {
                       </FormItem>
                     )}
                   />
-
                   <FormField
                     control={form.control}
                     name="loan_type"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Loan Type</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select loan type" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="Conventional">
-                              Conventional
-                            </SelectItem>
+                            <SelectItem value="Conventional">Conventional</SelectItem>
                             <SelectItem value="FHA">FHA</SelectItem>
                             <SelectItem value="VA">VA</SelectItem>
                           </SelectContent>
@@ -217,8 +234,46 @@ export default function Home() {
                       </FormItem>
                     )}
                   />
+                  {loanType === "VA" && (
+                    <FormField
+                      control={form.control}
+                      name="va_exempt"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>VA Exempt</FormLabel>
+                          <Select
+                            onValueChange={(value) => field.onChange(value === "true")}
+                            defaultValue={field.value ? "true" : "false"}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select exemption status" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="true">Yes</SelectItem>
+                              <SelectItem value="false">No</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                  <FormField
+                    control={form.control}
+                    name="property_address"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Property Address</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
-
                 <Button type="submit" className="w-full">
                   Generate Quote
                 </Button>
@@ -236,16 +291,16 @@ export default function Home() {
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
+                    <p className="text-sm text-gray-500">Loan Amount</p>
+                    <p className="text-2xl font-bold">${quote.loanAmount?.toFixed(2)}</p>
+                  </div>
+                  <div>
                     <p className="text-sm text-gray-500">Monthly Payment</p>
-                    <p className="text-2xl font-bold">
-                      ${quote.monthlyPayment.toFixed(2)}
-                    </p>
+                    <p className="text-2xl font-bold">${quote.monthlyPayment.toFixed(2)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Total Interest</p>
-                    <p className="text-2xl font-bold">
-                      ${quote.totalInterest.toFixed(2)}
-                    </p>
+                    <p className="text-2xl font-bold">${quote.totalInterest.toFixed(2)}</p>
                   </div>
                 </div>
                 <p className="text-sm text-gray-500 text-center italic">
